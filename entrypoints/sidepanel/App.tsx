@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import Header from "@/entrypoints/sidepanel/header.tsx";
 import { LoginPage } from './LoginPage';
 import { authService, AuthState } from './authService';
-import { AiPromptBox } from './prompt-box';
+import SmartAssistant from './SmartAssistant';
 
 export default () => {
     const [headTitle, setHeadTitle] = useState("AdviserGPT");
@@ -69,12 +69,9 @@ export default () => {
 
     return (
         <div className={theme}>
-            <div className="fixed top-0 right-0 h-screen w-full bg-background z-[1000000000000]">
-                <Header headTitle={headTitle} />
                 <main className="h-[calc(100vh-64px)] p-4">
-                    <AiPromptBox />
+                    <SmartAssistant />
                 </main>
-            </div>
         </div>
     );
 };
