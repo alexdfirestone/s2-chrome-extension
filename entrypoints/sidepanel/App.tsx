@@ -1,27 +1,21 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.module.css';
 import '../../assets/main.css'
-import Sidebar, {SidebarType} from "@/entrypoints/sidebar.tsx";
-import {browser} from "wxt/browser";
-import ExtMessage, {MessageType} from "@/entrypoints/types.ts";
-import {Button} from "@/components/ui/button.tsx";
-import {Card} from "@/components/ui/card.tsx";
-import {Home} from "@/entrypoints/sidepanel/home.tsx";
-import {SettingsPage} from "@/entrypoints/sidepanel/settings.tsx";
-import {useTheme} from "@/components/theme-provider.tsx";
-import {useTranslation} from 'react-i18next';
+import { browser } from "wxt/browser";
+import ExtMessage, { MessageType } from "@/entrypoints/types.ts";
+import { useTheme } from "@/components/theme-provider.tsx";
+import { useTranslation } from 'react-i18next';
 import Header from "@/entrypoints/sidepanel/header.tsx";
+import { LoginPage } from './LoginPage';
+import { authService, AuthState } from './authService';
+import { AiPromptBox } from './prompt-box';
 
 export default () => {
-    const [showButton, setShowButton] = useState(false)
-    const [showCard, setShowCard] = useState(false)
-    const [sidebarType, setSidebarType] = useState<SidebarType>(SidebarType.home);
-    const [headTitle, setHeadTitle] = useState("home")
-    const [buttonStyle, setButtonStyle] = useState<any>();
-    const [cardStyle, setCardStyle] = useState<any>();
-    const cardRef = useRef<HTMLDivElement>(null);
-    const {theme, toggleTheme} = useTheme();
-    const {t, i18n} = useTranslation();
+    const [headTitle, setHeadTitle] = useState("AdviserGPT");
+    const { theme, toggleTheme } = useTheme();
+    const { t, i18n } = useTranslation();
+    const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false });
+    const [isLoading, setIsLoading] = useState(true);
 
     async function initI18n() {
         let data = await browser.storage.local.get('i18n');
@@ -31,6 +25,20 @@ export default () => {
     }
 
     useEffect(() => {
+        const init = async () => {
+            try {
+                const authStatus = await authService.checkAuthStatus();
+                setAuthState(authStatus);
+                await initI18n();
+            } catch (error) {
+                console.error('Initialization failed:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        init();
+
         browser.runtime.onMessage.addListener((message: ExtMessage, sender, sendResponse) => {
             console.log('sidepanel:')
             console.log(message)
@@ -40,34 +48,33 @@ export default () => {
                 toggleTheme(message.content)
             }
         });
-
-        initI18n();
     }, []);
+
+    const handleLogin = async (email: string, password: string) => {
+        try {
+            const authStatus = await authService.login(email, password);
+            setAuthState(authStatus);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    if (isLoading) {
+        return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    }
+
+    if (!authState.isAuthenticated) {
+        return <LoginPage onLogin={handleLogin} />;
+    }
 
     return (
         <div className={theme}>
-            {<div
-                className="fixed top-0 right-0 h-screen w-full bg-background z-[1000000000000] rounded-l-xl shadow-2xl">
-                <Header headTitle={headTitle}/>
-                <Sidebar sideNav={(sidebarType: SidebarType) => {
-                    setSidebarType(sidebarType);
-                    setHeadTitle(sidebarType);
-                }}/>
-                <main className="mr-14 grid gap-4 p-4 md:gap-8 md:p-8">
-                    {sidebarType === SidebarType.home && <Home/>}
-                    {sidebarType === SidebarType.settings && <SettingsPage/>}
+            <div className="fixed top-0 right-0 h-screen w-full bg-background z-[1000000000000]">
+                <Header headTitle={headTitle} />
+                <main className="h-[calc(100vh-64px)] p-4">
+                    <AiPromptBox />
                 </main>
             </div>
-            }
-            {showButton &&
-                <Button className="absolute z-[100000]" style={buttonStyle}>send Message</Button>
-            }
-            {
-                <Card ref={cardRef}
-                      className={`absolute z-[100000] w-[300px] h-[200px] ${showCard ? 'block' : 'hidden'}`}
-                      style={cardStyle}></Card>
-            }
         </div>
-
-    )
+    );
 };

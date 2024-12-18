@@ -70,6 +70,7 @@ export default () => {
             {showContent && <div
                 className="fixed top-0 right-0 h-screen w-[400px] bg-background z-[1000000000000] rounded-l-xl shadow-2xl">
                 <Header headTitle={headTitle}/>
+                <p>ALEX CONTENT!!</p>
                 <Sidebar closeContent={() => {
                     setShowContent(false)
                 }} sideNav={(sidebarType: SidebarType) => {

@@ -7,7 +7,7 @@ export function Home() {
     const {t} = useTranslation();
     const references = [
         {
-            name: "Wxt",
+            name: "Alex",
             url: "https://wxt.dev/"
         },
         {
