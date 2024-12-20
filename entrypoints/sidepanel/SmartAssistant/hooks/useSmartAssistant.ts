@@ -1,20 +1,56 @@
 import { useState } from 'react';
 import { AIPromptService } from '../services/api';
-import { DemoQuestion, ResultItem } from '../types';
+import { ResultItem, ModelOption } from '../types';
 
 const aiService = new AIPromptService();
 
-export const useSmartAssistant = (demoData: DemoQuestion[]) => {
+export const useSmartAssistant = () => {
   const [query, setQuery] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<ResultItem[]>([]);
-  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+  const [selectedChips, setSelectedChips] = useState<ResultItem[]>([]);
   const [generatedAnswer, setGeneratedAnswer] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [currentBatch, setCurrentBatch] = useState(0);
+  const [modelOptions] = useState<ModelOption[]>([
+      {
+        id: 1,
+        value: "gpt-4o",
+        label: "Fastest",
+        caption: "For Fast and reliable results.",
+        prompt: {
+          text: "getText4UserPrompt",
+          table: "getTable2SystemPrompt"
+        }
+      },
+      {
+        id: 2,
+        value: "gpt-4o",
+        label: "Advanced Reasoning",
+        caption: "Designed for complex reasoning tasks, delivering thorough and insightful responses.",
+        prompt: {
+          text: "getText2UserPrompt",
+          table: "getTable2SystemPrompt"
+        }
+      },
+      {
+        id: 3,
+        value: "claude-3-5-sonnet-20241022",
+        label: "Technical & Quantitative",
+        caption: "Specialized for technical and quantitative queries, ensuring accuracy and depth.",
+        prompt: {
+          text: "getText4UserPrompt",
+          table: "getTable2SystemPrompt"
+        }
+      }
+    ]);
+  const [answerGenerationModel, setAnswerGenerationModel] = useState<ModelOption>(modelOptions[0]);
+  const [questionId, setQuestionId] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [currentAnswer, setCurrentAnswer] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,17 +59,27 @@ export const useSmartAssistant = (demoData: DemoQuestion[]) => {
     setIsLoading(true);
     setError(null);
     setCurrentQuestion(query);
-    setCurrentBatch(0); // Reset batch count on new search
-    setHasMore(true); // Reset hasMore flag
+    setCurrentBatch(0);
+    setHasMore(true);
 
     try {
-      const searchResults = await aiService.searchSimilar({
-        contentToSearch: query,
-        k: 5,
-        returnAnswer: true,
-        contentType: 'BOTH',
-        searchType: 'HYBRID'
-      });
+      console.log('Initial search - offset: 0, k: 5');
+      const [searchResults, questionResponse] = await Promise.all([
+        aiService.searchSimilar({
+          contentToSearch: query,
+          k: 5,
+          returnAnswer: true,
+          contentType: 'BOTH',
+          searchType: 'HYBRID'
+        }),
+        aiService.createQuestion(query)
+      ]);
+
+      console.log(questionResponse)
+
+      if (questionResponse?.question_id) {
+        setQuestionId(questionResponse.question_id);
+      }
 
       const transformedResults = searchResults.map((result, index) => ({
         id: result.questionData.question_id || `result-${index}`,
@@ -50,48 +96,66 @@ export const useSmartAssistant = (demoData: DemoQuestion[]) => {
       }));
 
       setResults(transformedResults);
-      setCurrentBatch(1); // Set to 1 since we've loaded the first batch
+      setCurrentBatch(1);
     } catch (error) {
       setError('Failed to get results. Please try again.');
-      console.error('Error searching similar:', error);
+      console.error('Error in handleSubmit:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLoadMore = async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore) {
+      console.log('Skipping load more - already loading or no more results');
+      return;
+    }
 
     try {
       setLoadingMore(true);
       
+      console.log(`Loading more - offset: ${results.length}, k: 5`);
       const moreResults = await aiService.searchSimilar({
         contentToSearch: query,
         k: 5,
-        offset: currentBatch * 5, // Add offset for pagination
+        offset: results.length,
         returnAnswer: true,
         contentType: 'BOTH',
         searchType: 'HYBRID'
       });
 
+      console.log(`Received ${moreResults.length} new results`);
+
       if (moreResults.length === 0) {
+        console.log('No more results available, setting hasMore to false');
         setHasMore(false);
         return;
       }
 
-      const transformedResults = moreResults.map((result, index) => ({
-        id: result.questionData.question_id || `result-${currentBatch * 5 + index}`,
-        score: result.score || 0,
-        rank: currentBatch * 5 + index + 1,
-        title: result.metadata.parent_name || 'Untitled',
-        content: result.questionData.text || '',
-        metadata: {
-          ...result.metadata,
-          frequency: result.metadata.frequency || undefined,
-          status: result.metadata.status || undefined
-        },
-        answer_block: result.questionData.answer_block || ''
-      }));
+      const existingIds = new Set(results.map(r => r.id));
+      const transformedResults = moreResults
+        .map((result, index) => ({
+          id: result.questionData.question_id || `result-${results.length + index}`,
+          score: result.score || 0,
+          rank: results.length + index + 1,
+          title: result.metadata.parent_name || 'Untitled',
+          content: result.questionData.text || '',
+          metadata: {
+            ...result.metadata,
+            frequency: result.metadata.frequency || undefined,
+            status: result.metadata.status || undefined
+          },
+          answer_block: result.questionData.answer_block || ''
+        }))
+        .filter(result => !existingIds.has(result.id));
+
+      console.log(`Adding ${transformedResults.length} unique results`);
+
+      if (transformedResults.length === 0) {
+        console.log('No new unique results, setting hasMore to false');
+        setHasMore(false);
+        return;
+      }
 
       setResults(prev => [...prev, ...transformedResults]);
       setCurrentBatch(prev => prev + 1);
@@ -109,30 +173,79 @@ export const useSmartAssistant = (demoData: DemoQuestion[]) => {
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
-  const handleAddChip = (title: string) => {
-    if (!selectedChips.includes(title)) {
-      setSelectedChips([...selectedChips, title]);
+  const handleAddChip = (result: ResultItem) => {
+    if (!selectedChips.some(chip => chip.id === result.id)) {
+      setSelectedChips([...selectedChips, result]);
     }
   };
 
-  const handleRemoveChip = (title: string) => {
-    setSelectedChips(selectedChips.filter(chip => chip !== title));
+  const handleRemoveChip = (id: string) => {
+    setSelectedChips(selectedChips.filter(chip => chip.id !== id));
   };
 
   const handleGenerateAnswer = async () => {
-    if (selectedChips.length === 0) return;
+    console.log(selectedChips.length, questionId);
+    if (selectedChips.length === 0 || !questionId) return;
 
     setIsLoading(true);
+    setIsStreaming(true);
     setError(null);
 
     try {
-      const response = await aiService.generateAnswer(selectedChips);
-      setGeneratedAnswer(response.answer);
+      const params = {
+        rfp_id: '',
+        question: questionId,
+        similarResponses: selectedChips.map(chip => chip.id),
+        additionalContext: '',
+        answerGenerationModel: answerGenerationModel.value,
+        responseType: 'text',
+        answerGenerationSettings: {
+          IncludeQuestionaireDetails: false,
+          IncludeFirmProfileDetails: false
+        },
+        prompt: answerGenerationModel.prompt,
+        currentAnswerBlock: null,
+        isFollowUp: false
+      };
+
+      const reader = await aiService.generateAnswer(params);
+      if (!reader) throw new Error('Response body is null');
+
+      let accumulatedResponse = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = new TextDecoder().decode(value);
+        accumulatedResponse += text;
+        
+        // Check for final response in streaming content
+        const finalResponseMatch = /<final_response>([\s\S]*?)<\/final_response>/g.exec(accumulatedResponse);
+        const textToShow = finalResponseMatch ? finalResponseMatch[1].trim() : accumulatedResponse;
+        
+        // Update streaming content
+        setCurrentAnswer({
+          time: Date.now(),
+          blocks: [{
+            id: `block-${Date.now()}`,
+            type: "paragraph",
+            data: { text: textToShow }
+          }],
+          version: "2.30.6"
+        });
+      }
+
+      // Process final response
+      const finalResponseMatch = /<final_response>([\s\S]*?)<\/final_response>/g.exec(accumulatedResponse);
+      const finalText = finalResponseMatch ? finalResponseMatch[1].trim() : accumulatedResponse;
+      setGeneratedAnswer(finalText);
+
     } catch (error) {
       setError('Failed to generate answer. Please try again.');
       console.error('Error generating answer:', error);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -146,6 +259,24 @@ export const useSmartAssistant = (demoData: DemoQuestion[]) => {
     setCurrentBatch(0);
     setHasMore(true);
     setLoadingMore(false);
+  };
+
+  const isItemSelected = (resultId: string) => {
+    return selectedChips.some(chip => chip.id === resultId);
+  };
+
+  const handleCreateQuestion = async (questionText: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await aiService.createQuestion(questionText);
+    } catch (error) {
+      setError('Failed to create question. Please try again.');
+      console.error('Error creating question:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
@@ -166,5 +297,10 @@ export const useSmartAssistant = (demoData: DemoQuestion[]) => {
     handleGenerateAnswer,
     handleReset,
     handleLoadMore,
+    isItemSelected,
+    handleCreateQuestion,
+    questionId,
+    isStreaming,
+    currentAnswer
   };
 };

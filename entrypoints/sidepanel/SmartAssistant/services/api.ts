@@ -1,6 +1,11 @@
 // services/api.ts
 import { authService, AuthState } from '../../authService';
 import { ResultItem } from '../types';
+import { PromptOption } from '../types';
+import { getTenantID } from '@/supabase/getTenant';
+import { createSupabaseClient } from '@/supabase/client';
+import { SimilaritySearchRequest, SimilaritySearchResponse } from '../types';
+import { SupabaseAuthClient } from '@supabase/supabase-js/dist/module/lib/SupabaseAuthClient';
 
 interface QueryResponse {
     results: ResultItem[];
@@ -10,61 +15,22 @@ interface QueryResponse {
     answer: string;
   }
   
-  interface SimilaritySearchResponse {
-    pageContent: string;
-    metadata: {
-      embedding_id: string;
-      question_id: string;
-      type: string;
-      tenant_id: string;
-      product: string[];
-      role: string[];
-      frequency: string | null;
-      status: string | null;
-      parent_name: string | null;
-      last_saved: string | null;
-    };
-    score: number;
-    rank: number;
-    questionData: {
-      question_id: string;
-      text: string;
-      answer: string | null;
-      answer_block: {
-        time: number;
-        blocks: Array<{
-          id: string;
-          data: { text: string };
-          type: string;
-        }>;
-        version: string;
-      };
-      // ... other questionData fields can be added as needed
-    };
-  }
-  
-  interface SimilaritySearchRequest {
-    contentToSearch: string;
-    k: number;
-    offset: number;
-    returnAnswer: boolean;
-    contentType: string;
-    metadata: {
-      product_filter: string | null;
-      role_filter: string | null;
-      frequency_filter: string | null;
-      status_filter: string | null;
-    };
-    searchType: string;
-  }
   
   export class AIPromptService {
     private baseUrl: string;
+    private supabase: any
+    private tenantId?: string;
   
     constructor(baseUrl: string = import.meta.env.VITE_ADVISER_GPT_URL || 'https://advisergpt.ai') {
       this.baseUrl = baseUrl;
+      this.initialize();
     }
   
+    private async initialize() {
+      this.supabase = createSupabaseClient()
+      this.tenantId = await getTenantID(this.supabase);
+    }
+
     private async getAuthHeaders(): Promise<HeadersInit> {
       const authState: AuthState = await authService.checkAuthStatus();
       
@@ -125,101 +91,86 @@ interface QueryResponse {
       }
     }
   
-    async queryAI(question: string): Promise<QueryResponse> {
+    async generateAnswer(params: {
+      rfp_id: string;
+      question: string;
+      similarResponses: string[];
+      additionalContext: string;
+      answerGenerationModel: string;
+      responseType: string;
+      answerGenerationSettings: any;
+      prompt: PromptOption;
+      currentAnswerBlock: any;
+      isFollowUp: boolean;
+    }): Promise<any> {
       try {
-        const response = await fetch(`${this.baseUrl}/query`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ question }),
-        });
-  
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-  
-        return await response.json();
-      } catch (error) {
-        console.error('Error querying AI:', error);
-        throw error;
-      }
-    }
-  
-    async generateAnswer(selectedTopics: string[]): Promise<GenerateAnswerResponse> {
-      try {
-        const response = await fetch(`${this.baseUrl}/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ topics: selectedTopics }),
-        });
-  
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-  
-        return await response.json();
-      } catch (error) {
-        console.error('Error generating answer:', error);
-        throw error;
-      }
-    }
-  
-    async loadMoreResponses(params: {
-      searchQuery: string;
-      currentBatch: number;
-      searchMetadata?: {
-        product?: string | null;
-        role?: string | null;
-        frequency?: string | null;
-        status?: string | null;
-      };
-    }): Promise<SimilaritySearchResponse[]> {
-      try {
+        console.log(params)
         const headers = await this.getAuthHeaders();
-        
-        const requestBody: SimilaritySearchRequest = {
-          contentToSearch: params.searchQuery.trim() !== "" ? params.searchQuery : "default query",
-          k: 5,
-          offset: params.currentBatch * 5,
-          returnAnswer: true,
-          contentType: "BOTH",
-          metadata: {
-            product_filter: params.searchMetadata?.product ?? null,
-            role_filter: params.searchMetadata?.role ?? null,
-            frequency_filter: params.searchMetadata?.frequency ?? null,
-            status_filter: params.searchMetadata?.status ?? null,
-          },
-          searchType: "HYBRID",
-        };
-
-        const response = await fetch(`${this.baseUrl}/api/rfp/searchHybrid`, {
+        const response = await fetch(`${this.baseUrl}/api/rfp/generate`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(params),
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-        }
+        if (!response.ok) throw new Error('Failed to generate RFP response');
+        console.log(response.body, 'response')
 
-        const data = await response.json();
-        const startRank = params.currentBatch * 5;
-        
-        return data.map((item: any, index: number) => ({
-          ...item,
-          rank: item.rank ?? (startRank + index),
-          metadata: {
-            ...item.metadata,
-            parent_name: item.metadata?.parent_name ?? null,
-            last_saved: item.metadata?.last_saved ?? null,
-          }
-        }));
+        return response.body?.getReader();
       } catch (error) {
-        console.error('Error loading more responses:', error);
+        console.error("Error generating RFP response:", error);
+        throw error;
+      }
+    }
+  
+    async modifyAnswer(params: {
+      rfp_id: string;
+      question: string;
+      similarResponses: string[];
+      additionalContext: string;
+      answerGenerationModel: string;
+      responseType: string;
+      answerGenerationSettings: any;
+      prompt: string;
+      isFollowUp: boolean;
+      currentContent: string;
+      shortcutType: string;
+      customPrompt?: string;
+    }): Promise<any> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/generate`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(params),
+        });
+
+        if (!response.ok) throw new Error('Failed to generate RFP response');
+        return response.body?.getReader();
+      } catch (error) {
+        console.error('Error modifying answer:', error);
+        throw error;
+      }
+    }
+  
+    async createQuestion(questionText: string): Promise<any> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/questions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'CREATE',
+            data: {
+              text: questionText,
+              tenant_id: this.tenantId
+            }
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to create question');
+        return response.json();
+      } catch (error) {
+        console.error('Error creating question:', error);
         throw error;
       }
     }

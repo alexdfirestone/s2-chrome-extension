@@ -1,14 +1,40 @@
 // New component for individual card
-import { PlusCircleIcon, Copy } from 'lucide-react';
+import { PlusCircleIcon, Copy, Star, StarHalf, StarOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultItem } from '../types';
+import {ViewOnlyEditorContainer } from '../../../../components/EditorJs/EditorJs';
+import { Badge } from '@/components/ui/badge';
 
-interface ResultCardProps {
+export interface ResultCardProps {
   result: ResultItem;
   isSelected: boolean;
-  onSelect: (content: string) => void;
+  onSelect: (result: ResultItem) => void;
   onUseExactAnswer: (answer: any) => void;
 }
+
+const getScoreBadge = (score: number) => {
+  const roundedScore = Math.round(score * 100);
+  let icon;
+  let color;
+
+  if (score >= 0.9) {
+    icon = <Star className="w-3 h-3" />;
+    color = "bg-green-100 text-green-800 hover:bg-green-100";
+  } else if (score >= 0.7) {
+    icon = <StarHalf className="w-3 h-3" />;
+    color = "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
+  } else {
+    icon = <StarOff className="w-3 h-3" />;
+    color = "bg-red-100 text-red-800 hover:bg-red-100";
+  }
+
+  return (
+    <Badge variant="secondary" className={`text-xs px-2 py-0.5 flex items-center gap-1 ${color}`}>
+      {icon}
+      <span className="font-medium">Similarity:</span> {roundedScore}%
+    </Badge>
+  );
+};
 
 export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: ResultCardProps) => {
   return (
@@ -26,9 +52,7 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs px-2 py-1 rounded-full bg-primary/10">
-              Score: {result.score.toFixed(2)}
-            </span>
+            {getScoreBadge(result.score)}
             <p className="text-xs text-gray-500">
               Last Saved: {result.metadata.last_saved}
             </p>
@@ -37,10 +61,15 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
 
         <div className="space-y-2">
           <p className="font-semibold text-sm">
-            Q: {result.title}
+            Q: {result.content}
           </p>
           <div className="text-sm text-gray-700 leading-relaxed">
-            {result.content}
+            <ViewOnlyEditorContainer 
+              value={result.answer_block}
+              uniqueId={`result-card-${result.id}`}
+              backgroundColor='#F9F9FB'
+              minHeight={50}
+            />
           </div>
         </div>
 
@@ -49,7 +78,7 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
             variant="outline"
             size="sm"
             className="h-auto sm:h-8 py-2 sm:py-0 flex-1 flex items-center justify-center gap-2 px-3 hover:bg-primary/10 border-primary/20 text-primary"
-            onClick={() => onSelect(result.content)}
+            onClick={() => onSelect(result)}
             disabled={isSelected}
           >
             <PlusCircleIcon
@@ -67,7 +96,7 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
           >
             <Copy className="h-4 w-4" />
             <span className="text-xs whitespace-nowrap">
-              Use As Written
+              Copy Answer
             </span>
           </Button>
         </div>
