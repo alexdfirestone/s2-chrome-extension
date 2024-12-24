@@ -1,6 +1,6 @@
 'use client';
 
-import { RotateCcw, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
+import { RotateCcw, ChevronUp, ChevronDown, PlusCircle, Wand2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSmartAssistant } from './hooks/useSmartAssistant';
 import SuggestedQuestions from './components/SuggestedQuestions'
@@ -17,12 +17,18 @@ import { ExpandableSection } from './components/ExpandableSection';
 import { ResultsDrawer } from './components/ResultsDrawer';
 import { TopDrawer } from './components/TopDrawer';
 import { DrawerSystem } from './components/DrawerSystem';
+import { CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export function SmartAssistant() {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isCopied, setIsCopied] = useState(false);
+
   const {
     query,
     currentQuestion,
     isLoading,
+    isGenerating,
     loadingMore,
     results,
     selectedChips,
@@ -30,7 +36,7 @@ export function SmartAssistant() {
     error,
     hasMore,
     setQuery,
-    handleSubmit,
+    handleSubmit: originalHandleSubmit,
     handleSuggestedQuestion,
     handleAddChip,
     handleRemoveChip,
@@ -41,7 +47,6 @@ export function SmartAssistant() {
     currentAnswer    
   } = useSmartAssistant();
 
-  const aiService = useMemo(() => new AIPromptService(), []);
 
   const handleUseExactAnswer = (answer: any) => {
     console.log('Using exact answer:', answer);
@@ -52,10 +57,37 @@ export function SmartAssistant() {
   const getControlsHeight = useCallback(() => {
     if (controlsSectionRef.current) {
       const rect = controlsSectionRef.current.getBoundingClientRect();
-      return rect.bottom;
+      return rect.bottom + 8;
     }
     return 0;
   }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    setIsDrawerOpen(true);
+    await originalHandleSubmit(e);
+  };
+
+  const handleSuggestedQuestionWithDrawer = (question: string) => {
+    setIsDrawerOpen(true);
+    handleSuggestedQuestion(question);
+  };
+
+  const handleGenerateAnswerWithDrawer = () => {
+    setIsDrawerOpen(false);
+    handleGenerateAnswer();
+  };
+
+  const handleCopyAnswer = useCallback(() => {
+    if (generatedAnswer) {
+      navigator.clipboard.writeText(generatedAnswer);
+      setIsCopied(true);
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 500);
+    }
+  }, [generatedAnswer]);
 
   return (
     <div className="h-full flex flex-col">
@@ -68,7 +100,11 @@ export function SmartAssistant() {
         
         {!currentQuestion ? (
           <div className="h-full flex flex-col items-center justify-center p-6 space-y-8">
-            <SuggestedQuestions onQuestionSelect={handleSuggestedQuestion} />
+            <CardHeader className="text-center">
+              <h2 className="text-2xl font-bold">AdviserGPT</h2>
+              <Badge variant={'secondary'}>Broswer Extension - Beta</Badge>
+            </CardHeader>
+            <SuggestedQuestions onQuestionSelect={handleSuggestedQuestionWithDrawer} />
             <QueryInput
               query={query}
               isLoading={isLoading}
@@ -88,22 +124,49 @@ export function SmartAssistant() {
                   id="controls-section"
                 >
                   <SelectedChips chips={selectedChips} onRemove={handleRemoveChip} />
-                  <Button 
-                    onClick={handleGenerateAnswer} 
-                    disabled={isLoading || selectedChips.length === 0}
-                    variant="secondary"
-                    className="w-full"
-                  >
-                    {isLoading ? 'Generating...' : 'Generate Answer'}
-                  </Button>
+                  <div className="space-y-2">
+                    {selectedChips.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center">
+                        📝 Please select relevant context from Smart Assistant below to generate a new answer.
+                      </p>
+                    )}
+                    <Button 
+                      onClick={handleGenerateAnswerWithDrawer}
+                      disabled={isGenerating || selectedChips.length === 0}
+                      variant="default"
+                      className="w-full"
+                    >
+                      {isGenerating ? 'Generating Answer...' : 'Generate Answer'}
+                    </Button>
+                    {generatedAnswer && (
+                      <Button 
+                        onClick={handleCopyAnswer}
+                        disabled={isCopied}
+                        variant="secondary"
+                        className="w-full"
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy Answer
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Answer Section */}
                 <div className="relative z-0">
-                  {generatedAnswer && (
+                  {(isGenerating || generatedAnswer) && (
                     <AnswerTextArea 
                       answer={generatedAnswer}
-                      isLoading={isStreaming}
+                      isLoading={isGenerating}
                       isStreaming={isStreaming}
                       streamingContent={currentAnswer}
                     />
@@ -115,13 +178,16 @@ export function SmartAssistant() {
             {/* Smart Assistant Drawer */}
             <div className="border-t fixed bottom-0 left-0 right-0 bg-background z-50">
               <ResultsDrawer
+                defaultOpen={true}
+                open={isDrawerOpen}
+                onOpenChange={setIsDrawerOpen}
                 title="Smart Assistant"
-                subtitle="Click to view the most relevant content from your knowledge vault"
+                subtitle={isLoading ? "Searching..." : "Click to view the most relevant content from your knowledge vault"}
                 results={results}
                 onSelect={handleAddChip}
                 onUseExactAnswer={handleUseExactAnswer}
                 hasMore={hasMore}
-                isLoading={loadingMore}
+                isLoading={loadingMore || isLoading}
                 onLoadMore={handleLoadMore}
                 selectedIds={selectedChips.map(chip => chip.id)}
                 getControlsHeight={getControlsHeight}

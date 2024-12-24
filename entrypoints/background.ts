@@ -9,7 +9,7 @@ export default defineBackground(() => {
 
     //monitor the event from extension icon click
     browser.action.onClicked.addListener((tab) => {
-        // 发送消息给content-script.js
+        //content-script.js
         console.log("click icon")
         console.log(tab)
         browser.tabs.sendMessage(tab.id!, {messageType: MessageType.clickExtIcon});

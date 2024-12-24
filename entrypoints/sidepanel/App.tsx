@@ -61,7 +61,7 @@ export default () => {
 
     return (
         <div className={theme}>
-                <main className="h-[calc(100vh-64px)] p-4">
+                <main className="h-[calc(100vh-64px)] pt-2">
                     <SmartAssistant />
                 </main>
         </div>

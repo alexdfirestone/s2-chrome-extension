@@ -7,13 +7,6 @@ import { createSupabaseClient } from '@/supabase/client';
 import { SimilaritySearchRequest, SimilaritySearchResponse } from '../types';
 import { SupabaseAuthClient } from '@supabase/supabase-js/dist/module/lib/SupabaseAuthClient';
 
-interface QueryResponse {
-    results: ResultItem[];
-  }
-  
-  interface GenerateAnswerResponse {
-    answer: string;
-  }
   
   
   export class AIPromptService {

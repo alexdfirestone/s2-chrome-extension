@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ResultItem } from '../types';
 import {ViewOnlyEditorContainer } from '../../../../components/EditorJs/EditorJs';
 import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
 
 export interface ResultCardProps {
   result: ResultItem;
@@ -37,6 +38,8 @@ const getScoreBadge = (score: number) => {
 };
 
 export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: ResultCardProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <div
       className={`p-5 rounded-md transition-all duration-300 ${
@@ -63,14 +66,23 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
           <p className="font-semibold text-sm">
             Q: {result.content}
           </p>
-          <div className="text-sm text-gray-700 leading-relaxed">
+          <div className={`text-sm text-gray-700 leading-relaxed relative ${!isExpanded ? 'max-h-[200px] overflow-hidden' : ''}`}>
             <ViewOnlyEditorContainer 
               value={result.answer_block}
               uniqueId={`result-card-${result.id}`}
               backgroundColor='#F9F9FB'
               minHeight={50}
             />
+            {!isExpanded && (
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#F9F9FB] to-transparent" />
+            )}
           </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs text-primary/80 hover:text-primary transition-colors mt-1"
+          >
+            {isExpanded ? 'Show less' : 'Show more'}
+          </button>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mt-2">

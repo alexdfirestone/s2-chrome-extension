@@ -13,7 +13,6 @@ declare module "wxt/browser" {
     | "/icon/48.png"
     | "/icon/96.png"
     | "/popup-bak.html"
-    | "/sidebar.js"
     | "/sidepanel.html"
     | "/types.js"
     | "/wxt.svg"

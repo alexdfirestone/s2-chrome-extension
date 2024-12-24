@@ -11,13 +11,13 @@ interface SuggestedQuestionsProps {
 
 const demoQuestions: DemoQuestion[] = [
   {
-    question: "Could you describe your investment philosophy and explain what key factors differentiate your approach from competitors in the market?"
+    question: "💰 Could you describe your investment philosophy?"
   },
   {
-    question: "What is your approach to position sizing and portfolio rebalancing? Please provide specific examples of how you implement these decisions."
+    question: "⚖️ What is your approach to position sizing and portfolio rebalancing?"
   },
   {
-    question: "How do you identify, measure, and manage portfolio risk? Please detail your risk management framework and systems."
+    question: "💼 How do you identify, measure, and manage portfolio risk?"
   }
 ];
 

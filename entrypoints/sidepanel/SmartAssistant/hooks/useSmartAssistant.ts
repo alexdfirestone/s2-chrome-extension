@@ -8,6 +8,7 @@ export const useSmartAssistant = () => {
   const [query, setQuery] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<ResultItem[]>([]);
   const [selectedChips, setSelectedChips] = useState<ResultItem[]>([]);
@@ -187,7 +188,11 @@ export const useSmartAssistant = () => {
     console.log(selectedChips.length, questionId);
     if (selectedChips.length === 0 || !questionId) return;
 
-    setIsLoading(true);
+    // Clear previous answers
+    setCurrentAnswer(null);
+    setGeneratedAnswer('');
+    
+    setIsGenerating(true);
     setIsStreaming(true);
     setError(null);
 
@@ -244,7 +249,7 @@ export const useSmartAssistant = () => {
       setError('Failed to generate answer. Please try again.');
       console.error('Error generating answer:', error);
     } finally {
-      setIsLoading(false);
+      setIsGenerating(false);
       setIsStreaming(false);
     }
   };
@@ -259,6 +264,7 @@ export const useSmartAssistant = () => {
     setCurrentBatch(0);
     setHasMore(true);
     setLoadingMore(false);
+    setIsGenerating(false);
   };
 
   const isItemSelected = (resultId: string) => {
@@ -283,6 +289,7 @@ export const useSmartAssistant = () => {
     query,
     currentQuestion,
     isLoading,
+    isGenerating,
     loadingMore,
     results,
     selectedChips,

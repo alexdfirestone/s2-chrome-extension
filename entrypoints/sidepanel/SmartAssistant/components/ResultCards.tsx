@@ -1,7 +1,8 @@
 import { useInView } from 'react-intersection-observer';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ResultCard } from './ResultCard';
 import { ResultItem } from '../types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface ResultCardsProps {
   results: ResultItem[];
@@ -11,8 +12,23 @@ export interface ResultCardsProps {
   hasMore: boolean;
   isLoading: boolean;
   onLoadMore: () => Promise<void>;
-
 }
+
+const LoadingSkeleton = () => (
+  <div className="px-4 space-y-4">
+    {Array.from({ length: 3 }).map((_, index) => (
+      <div key={index} className="p-4 rounded-md border space-y-2">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-7 w-7 rounded-full" />
+        </div>
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-3 w-1/5" />
+      </div>
+    ))}
+  </div>
+);
 
 const ResultCards = ({ 
   results, 
@@ -33,6 +49,10 @@ const ResultCards = ({
       onLoadMore();
     }
   }, [inView, isLoading, hasMore, onLoadMore, results.length]);
+
+  if (isLoading && results.length === 0) {
+    return <LoadingSkeleton />;
+  }
 
   return (
     <div className="h-full overflow-auto">

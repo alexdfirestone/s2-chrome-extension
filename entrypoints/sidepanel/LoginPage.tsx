@@ -8,14 +8,18 @@ export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: stri
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     try {
       await onLogin(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -49,8 +53,8 @@ export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: stri
           </form>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full" onClick={handleSubmit}>
-            Login
+          <Button type="submit" className="w-full" onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
         </CardFooter>
       </Card>
