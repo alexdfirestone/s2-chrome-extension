@@ -154,6 +154,7 @@ interface QueryResponse {
   
     async createQuestion(questionText: string): Promise<any> {
       try {
+        this.tenantId = await getTenantID(this.supabase);
         const headers = await this.getAuthHeaders();
         const response = await fetch(`${this.baseUrl}/api/rfp/questions`, {
           method: 'POST',

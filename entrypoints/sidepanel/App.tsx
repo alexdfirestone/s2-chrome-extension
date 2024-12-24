@@ -13,23 +13,15 @@ import SmartAssistant from './SmartAssistant';
 export default () => {
     const [headTitle, setHeadTitle] = useState("AdviserGPT");
     const { theme, toggleTheme } = useTheme();
-    const { t, i18n } = useTranslation();
     const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false });
     const [isLoading, setIsLoading] = useState(true);
 
-    async function initI18n() {
-        let data = await browser.storage.local.get('i18n');
-        if (data.i18n) {
-            await i18n.changeLanguage(data.i18n)
-        }
-    }
 
     useEffect(() => {
         const init = async () => {
             try {
                 const authStatus = await authService.checkAuthStatus();
                 setAuthState(authStatus);
-                await initI18n();
             } catch (error) {
                 console.error('Initialization failed:', error);
             } finally {
@@ -43,9 +35,9 @@ export default () => {
             console.log('sidepanel:')
             console.log(message)
             if (message.messageType == MessageType.changeLocale) {
-                i18n.changeLanguage(message.content)
+                //i18n.changeLanguage(message.content)
             } else if (message.messageType == MessageType.changeTheme) {
-                toggleTheme(message.content)
+                //toggleTheme(message.content)
             }
         });
     }, []);

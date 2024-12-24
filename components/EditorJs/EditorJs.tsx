@@ -91,6 +91,9 @@ function Editor({ data, onChange, holder, readOnly = false, placeholder, style, 
   // First useEffect - Initialization
   useEffect(() => {
     if (!ref.current) {
+      // Add empty listener for mobile layout event
+      //document.addEventListener('editor mobile layout toggled', () => {});
+      
       const editor = new EditorJS({
         holder: holder,
         placeholder: placeholder || "Start writing here..",

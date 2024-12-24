@@ -19,7 +19,6 @@ export const authService = {
 
   async login(email: string, password: string): Promise<AuthState> {
     try {
-      console.log('hi')
       const supabase = createSupabaseClient();
       console.log(supabase)
       const { data, error } = await supabase.auth.signInWithPassword({

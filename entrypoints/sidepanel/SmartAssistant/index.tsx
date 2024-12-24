@@ -1,6 +1,6 @@
 'use client';
 
-import { RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
+import { RotateCcw, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSmartAssistant } from './hooks/useSmartAssistant';
 import SuggestedQuestions from './components/SuggestedQuestions'
@@ -9,9 +9,14 @@ import SelectedChips from './components/SelectedChips';
 import ResultCards from './components/ResultCards';
 import GeneratedAnswer from './components/AnswerTextArea';
 import { ErrorMessage } from './components/ErrorMessage';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { AIPromptService } from './services/api';
 import AnswerTextArea from './components/AnswerTextArea';
+import { ActiveQuery } from './components/ActiveQuery';
+import { ExpandableSection } from './components/ExpandableSection';
+import { ResultsDrawer } from './components/ResultsDrawer';
+import { TopDrawer } from './components/TopDrawer';
+import { DrawerSystem } from './components/DrawerSystem';
 
 export function SmartAssistant() {
   const {
@@ -38,26 +43,29 @@ export function SmartAssistant() {
 
   const aiService = useMemo(() => new AIPromptService(), []);
 
-  const [isAnswerExpanded, setIsAnswerExpanded] = useState(true);
-  const [isResultsExpanded, setIsResultsExpanded] = useState(true);
-
   const handleUseExactAnswer = (answer: any) => {
     console.log('Using exact answer:', answer);
   };
 
+  const controlsSectionRef = useRef<HTMLDivElement>(null);
+
+  const getControlsHeight = useCallback(() => {
+    if (controlsSectionRef.current) {
+      const rect = controlsSectionRef.current.getBoundingClientRect();
+      return rect.bottom;
+    }
+    return 0;
+  }, []);
+
   return (
     <div className="h-full flex flex-col">
-      {currentQuestion && (
-        <div className="bg-primary text-primary-foreground p-4 rounded-t-lg flex justify-between items-center">
-          <h2 className="text-lg font-semibold truncate flex-1 mr-2">{currentQuestion}</h2>
-          <Button variant="secondary" size="sm" onClick={handleReset}>
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Reset
-          </Button>
-        </div>
-      )}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-shrink-0">
+        {currentQuestion && <ActiveQuery currentQuestion={currentQuestion} onReset={handleReset} />}
+      </div>
+      
+      <div className="flex-1 overflow-hidden relative">
         {error && <ErrorMessage message={error} />}
+        
         {!currentQuestion ? (
           <div className="h-full flex flex-col items-center justify-center p-6 space-y-8">
             <SuggestedQuestions onQuestionSelect={handleSuggestedQuestion} />
@@ -69,20 +77,29 @@ export function SmartAssistant() {
             />
           </div>
         ) : (
-          <div className="h-full flex flex-col">
-            <div className="flex flex-col min-h-0 flex-1">
-              <button 
-                onClick={() => setIsAnswerExpanded(!isAnswerExpanded)}
-                className="flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/40"
-              >
-                <span className="font-medium">Answer Generation</span>
-                {isAnswerExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              
-              <div className={`overflow-auto transition-all ${
-                isAnswerExpanded ? 'flex-1' : 'h-0'
-              }`}>
-                <div className="p-4">
+          <div className="h-full flex flex-col relative">
+            {/* Scrollable content area containing both controls and answer */}
+            <div className="flex-1 overflow-auto z-0">
+              <div className="p-4 space-y-6">
+                {/* Controls Section - Add an id for easy scrolling */}
+                <div 
+                  ref={controlsSectionRef} 
+                  className="space-y-3"
+                  id="controls-section"
+                >
+                  <SelectedChips chips={selectedChips} onRemove={handleRemoveChip} />
+                  <Button 
+                    onClick={handleGenerateAnswer} 
+                    disabled={isLoading || selectedChips.length === 0}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    {isLoading ? 'Generating...' : 'Generate Answer'}
+                  </Button>
+                </div>
+
+                {/* Answer Section */}
+                <div className="relative z-0">
                   {generatedAnswer && (
                     <AnswerTextArea 
                       answer={generatedAnswer}
@@ -91,40 +108,24 @@ export function SmartAssistant() {
                       streamingContent={currentAnswer}
                     />
                   )}
-                  <SelectedChips chips={selectedChips} onRemove={handleRemoveChip} />
-                  <Button 
-                    onClick={handleGenerateAnswer} 
-                    disabled={isLoading || selectedChips.length === 0}
-                    className="w-full mt-4"
-                  >
-                    {isLoading ? 'Generating...' : 'Generate Answer'}
-                  </Button>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col min-h-0 flex-1">
-              <button 
-                onClick={() => setIsResultsExpanded(!isResultsExpanded)}
-                className="flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/40"
-              >
-                <span className="font-medium">Search Results ({results.length})</span>
-                {isResultsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              
-              <div className={`overflow-auto transition-all ${
-                isResultsExpanded ? 'flex-1' : 'h-0'
-              }`}>
-                <ResultCards 
-                  results={results} 
-                  onSelect={handleAddChip}
-                  onUseExactAnswer={handleUseExactAnswer}
-                  hasMore={hasMore}
-                  isLoading={loadingMore}
-                  onLoadMore={handleLoadMore}
-                  selectedIds={selectedChips.map(chip => chip.id)}
-                />
-              </div>
+            {/* Smart Assistant Drawer */}
+            <div className="border-t fixed bottom-0 left-0 right-0 bg-background z-50">
+              <ResultsDrawer
+                title="Smart Assistant"
+                subtitle="Click to view the most relevant content from your knowledge vault"
+                results={results}
+                onSelect={handleAddChip}
+                onUseExactAnswer={handleUseExactAnswer}
+                hasMore={hasMore}
+                isLoading={loadingMore}
+                onLoadMore={handleLoadMore}
+                selectedIds={selectedChips.map(chip => chip.id)}
+                getControlsHeight={getControlsHeight}
+              />
             </div>
           </div>
         )}
