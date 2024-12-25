@@ -50,13 +50,11 @@ export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: stri
               />
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
           </form>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );

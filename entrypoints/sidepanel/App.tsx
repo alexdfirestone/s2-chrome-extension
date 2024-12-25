@@ -3,16 +3,12 @@ import './App.module.css';
 import '../../assets/main.css'
 import { browser } from "wxt/browser";
 import ExtMessage, { MessageType } from "@/entrypoints/types.ts";
-import { useTheme } from "@/components/theme-provider.tsx";
-import { useTranslation } from 'react-i18next';
-import Header from "@/entrypoints/sidepanel/header.tsx";
-import { LoginPage } from './LoginPage';
-import { authService, AuthState } from './authService';
+import { LoginPage } from './Auth/LoginPage';
+import { authService, AuthState } from './Auth/authService';
 import SmartAssistant from './SmartAssistant';
+import HighlightedText from './SmartAssistant/components/HighlightedText';
 
 export default () => {
-    const [headTitle, setHeadTitle] = useState("AdviserGPT");
-    const { theme, toggleTheme } = useTheme();
     const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false });
     const [isLoading, setIsLoading] = useState(true);
 
@@ -60,10 +56,10 @@ export default () => {
     }
 
     return (
-        <div className={theme}>
-                <main className="h-[calc(100vh-64px)] pt-2">
-                    <SmartAssistant />
-                </main>
+        <div>
+            <main className="h-[calc(100vh-64px)] pt-2">
+                <SmartAssistant />
+            </main>
         </div>
     );
 };

@@ -1,7 +1,8 @@
 export enum MessageType {
     clickExtIcon = "clickExtIcon",
     changeTheme = "changeTheme",
-    changeLocale = "changeLocale"
+    changeLocale = "changeLocale",
+    textSelected = "textSelected"
 }
 
 export enum MessageFrom {
@@ -20,6 +21,16 @@ class ExtMessage {
     }
 
     messageType: MessageType;
+}
+
+export interface TextSelectionMessage extends ExtMessage {
+    messageType: MessageType.textSelected;
+    data: {
+        text: string;
+        url: string;
+        timestamp: string;
+        title: string;
+    };
 }
 
 export default ExtMessage;

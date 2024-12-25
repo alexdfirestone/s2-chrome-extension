@@ -1,5 +1,5 @@
 // services/api.ts
-import { authService, AuthState } from '../../authService';
+import { authService, AuthState } from '../../Auth/authService';
 import { ResultItem } from '../types';
 import { PromptOption } from '../types';
 import { getTenantID } from '@/supabase/getTenant';

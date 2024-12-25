@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { browser } from 'wxt/browser';
 import { AIPromptService } from '../services/api';
 import { ResultItem, ModelOption } from '../types';
 
@@ -52,11 +53,81 @@ export const useSmartAssistant = () => {
   const [questionId, setQuestionId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+
+  // Add message listener for text selection
+  useEffect(() => {
+    const messageListener = async (message: any) => {
+      if (message.type === 'TEXT_SELECTED' && message.data) {
+        const selectedText = message.data.text;
+        
+        // Reset everything first
+        handleReset();
+        
+        // Ensure drawer is open
+        setIsDrawerOpen(true);
+        
+        // Set the new query and current question
+        setQuery(selectedText);
+        setCurrentQuestion(selectedText);
+        
+        // Start the search immediately
+        setIsLoading(true);
+        setError(null);
+        setCurrentBatch(0);
+        setHasMore(true);
+
+        try {
+          console.log('🎯 Initial search for selected text:', selectedText);
+          const [searchResults, questionResponse] = await Promise.all([
+            aiService.searchSimilar({
+              contentToSearch: selectedText,
+              k: 5,
+              returnAnswer: true,
+              contentType: 'BOTH',
+              searchType: 'HYBRID'
+            }),
+            aiService.createQuestion(selectedText)
+          ]);
+
+          if (questionResponse?.question_id) {
+            setQuestionId(questionResponse.question_id);
+          }
+
+          const transformedResults = searchResults.map((result, index) => ({
+            id: result.questionData.question_id || `result-${index}`,
+            score: result.score || 0,
+            rank: index + 1,
+            title: result.metadata.parent_name || 'Untitled',
+            content: result.questionData.text || '',
+            metadata: {
+              ...result.metadata,
+              frequency: result.metadata.frequency || undefined,
+              status: result.metadata.status || undefined
+            },
+            answer_block: result.questionData.answer_block || ''
+          }));
+
+          setResults(transformedResults);
+          setCurrentBatch(1);
+        } catch (error) {
+          console.error('❌ Error processing selected text:', error);
+          setError('Failed to get results. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    browser.runtime.onMessage.addListener(messageListener);
+    return () => browser.runtime.onMessage.removeListener(messageListener);
+  }, []); // Empty dependency array since we're using stable functions
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
+    console.log('🔍 Starting new search for:', query);
     setIsLoading(true);
     setError(null);
     setCurrentQuestion(query);
@@ -64,7 +135,7 @@ export const useSmartAssistant = () => {
     setHasMore(true);
 
     try {
-      console.log('Initial search - offset: 0, k: 5');
+      console.log('🎯 Initial search - offset: 0, k: 5');
       const [searchResults, questionResponse] = await Promise.all([
         aiService.searchSimilar({
           contentToSearch: query,
@@ -76,7 +147,7 @@ export const useSmartAssistant = () => {
         aiService.createQuestion(query)
       ]);
 
-      console.log(questionResponse)
+      console.log('📝 Question created:', questionResponse);
 
       if (questionResponse?.question_id) {
         setQuestionId(questionResponse.question_id);
@@ -98,9 +169,11 @@ export const useSmartAssistant = () => {
 
       setResults(transformedResults);
       setCurrentBatch(1);
+
+      console.log(`✨ Found ${transformedResults.length} initial results`);
     } catch (error) {
+      console.error('❌ Error in handleSubmit:', error);
       setError('Failed to get results. Please try again.');
-      console.error('Error in handleSubmit:', error);
     } finally {
       setIsLoading(false);
     }
@@ -108,10 +181,11 @@ export const useSmartAssistant = () => {
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) {
-      console.log('Skipping load more - already loading or no more results');
+      console.log('⏸️ Skipping load more - already loading or no more results');
       return;
     }
 
+    console.log('📚 Loading more results...');
     try {
       setLoadingMore(true);
       
@@ -185,7 +259,11 @@ export const useSmartAssistant = () => {
   };
 
   const handleGenerateAnswer = async () => {
-    console.log(selectedChips.length, questionId);
+    console.log('🤖 Generating answer...', {
+      selectedChips: selectedChips.length,
+      questionId,
+      model: answerGenerationModel.label
+    });
     if (selectedChips.length === 0 || !questionId) return;
 
     // Clear previous answers
@@ -213,6 +291,7 @@ export const useSmartAssistant = () => {
         isFollowUp: false
       };
 
+      console.log('🌊 Starting stream processing...');
       const reader = await aiService.generateAnswer(params);
       if (!reader) throw new Error('Response body is null');
 
@@ -245,9 +324,10 @@ export const useSmartAssistant = () => {
       const finalText = finalResponseMatch ? finalResponseMatch[1].trim() : accumulatedResponse;
       setGeneratedAnswer(finalText);
 
+      console.log('✅ Answer generation complete');
     } catch (error) {
+      console.error('❌ Error generating answer:', error);
       setError('Failed to generate answer. Please try again.');
-      console.error('Error generating answer:', error);
     } finally {
       setIsGenerating(false);
       setIsStreaming(false);
@@ -255,6 +335,7 @@ export const useSmartAssistant = () => {
   };
 
   const handleReset = () => {
+    console.log('🔄 Resetting Smart Assistant state');
     setQuery('');
     setCurrentQuestion('');
     setResults([]);
@@ -265,6 +346,8 @@ export const useSmartAssistant = () => {
     setHasMore(true);
     setLoadingMore(false);
     setIsGenerating(false);
+    setCurrentAnswer(null);
+    setIsStreaming(false);
   };
 
   const isItemSelected = (resultId: string) => {
@@ -308,6 +391,8 @@ export const useSmartAssistant = () => {
     handleCreateQuestion,
     questionId,
     isStreaming,
-    currentAnswer
+    currentAnswer,
+    isDrawerOpen,
+    setIsDrawerOpen,
   };
 };

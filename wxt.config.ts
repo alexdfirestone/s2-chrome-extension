@@ -6,8 +6,8 @@ export default defineConfig({
     manifest: {
         permissions: ["activeTab", "scripting", "sidePanel", "storage", "tabs"],
         action: {},
-        name: '__MSG_extName__',
-        description: '__MSG_extDescription__',
+        name: 'AdviserGPT - Browser Extension',
+        description: 'A browser plugin to help asset managers accelerate customer acquisition and growth.',
         default_locale: "en"
     },
     vite: () => ({

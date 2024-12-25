@@ -13,7 +13,5 @@ declare global {
   const defineContentScript: typeof import('wxt/sandbox')['defineContentScript']
   const defineUnlistedScript: typeof import('wxt/sandbox')['defineUnlistedScript']
   const fakeBrowser: typeof import('wxt/testing')['fakeBrowser']
-  const i18n: typeof import('/Users/alexfirestone/projects/s2-chrome-extension/components/i18n')['default']
-  const i18nConfig: typeof import('/Users/alexfirestone/projects/s2-chrome-extension/components/i18nConfig')['default']
   const storage: typeof import('wxt/storage')['storage']
 }

@@ -9,7 +9,7 @@ import SelectedChips from './components/SelectedChips';
 import ResultCards from './components/ResultCards';
 import GeneratedAnswer from './components/AnswerTextArea';
 import { ErrorMessage } from './components/ErrorMessage';
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { AIPromptService } from './services/api';
 import AnswerTextArea from './components/AnswerTextArea';
 import { ActiveQuery } from './components/ActiveQuery';
@@ -46,7 +46,6 @@ export function SmartAssistant() {
     isStreaming,
     currentAnswer    
   } = useSmartAssistant();
-
 
   const handleUseExactAnswer = (answer: any) => {
     console.log('Using exact answer:', answer);
@@ -126,8 +125,8 @@ export function SmartAssistant() {
                   <SelectedChips chips={selectedChips} onRemove={handleRemoveChip} />
                   <div className="space-y-2">
                     {selectedChips.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center">
-                        📝 Please select relevant context from Smart Assistant below to generate a new answer.
+                      <p className="text-xs text-muted-foreground/75 text-center italic px-4">
+                        Select context below to generate an answer
                       </p>
                     )}
                     <Button 
