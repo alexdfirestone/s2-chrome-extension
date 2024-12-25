@@ -74,26 +74,5 @@ Note: You can't use this message in a manifest file.
       substitutions?: string | string[],
       options?: GetMessageOptions,
     ): string;
-    /**
-     * No message description.
-     *
-     * "wxt-react-shadcn-tailwindcss-chrome-extension"
-     */
-    getMessage(
-      messageName: "extName",
-      substitutions?: string | string[],
-      options?: GetMessageOptions,
-    ): string;
-    /**
-     * No message description.
-     *
-     * "This is a boilerplate and starter for chrome browser extension, built with Wxt、 React、 Tailwind css 、Shadcn ui and Typescript.
-Support dark mode and localization "
-     */
-    getMessage(
-      messageName: "extDescription",
-      substitutions?: string | string[],
-      options?: GetMessageOptions,
-    ): string;
   }
 }
