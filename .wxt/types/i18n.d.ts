@@ -74,25 +74,5 @@ Note: You can't use this message in a manifest file.
       substitutions?: string | string[],
       options?: GetMessageOptions,
     ): string;
-    /**
-     * No message description.
-     *
-     * "AdviserGPT"
-     */
-    getMessage(
-      messageName: "extName",
-      substitutions?: string | string[],
-      options?: GetMessageOptions,
-    ): string;
-    /**
-     * No message description.
-     *
-     * "Alex was here changing stuff and changing the description"
-     */
-    getMessage(
-      messageName: "extDescription",
-      substitutions?: string | string[],
-      options?: GetMessageOptions,
-    ): string;
   }
 }

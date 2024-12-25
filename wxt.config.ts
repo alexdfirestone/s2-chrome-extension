@@ -8,7 +8,6 @@ export default defineConfig({
         action: {},
         name: 'AdviserGPT - Browser Extension',
         description: 'A browser plugin to help asset managers accelerate customer acquisition and growth.',
-        default_locale: "en"
     },
     vite: () => ({
         plugins: [react()],

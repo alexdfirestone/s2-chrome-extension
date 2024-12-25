@@ -6,7 +6,6 @@ import ExtMessage, { MessageType } from "@/entrypoints/types.ts";
 import { LoginPage } from './Auth/LoginPage';
 import { authService, AuthState } from './Auth/authService';
 import SmartAssistant from './SmartAssistant';
-import HighlightedText from './SmartAssistant/components/HighlightedText';
 
 export default () => {
     const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false });
