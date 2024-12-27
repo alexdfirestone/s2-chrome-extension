@@ -19,6 +19,8 @@ import { TopDrawer } from './components/TopDrawer';
 import { DrawerSystem } from './components/DrawerSystem';
 import { CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ClassificationBadge from './components/ClassificationBadge';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function SmartAssistant() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
@@ -44,8 +46,9 @@ export function SmartAssistant() {
     handleReset,
     handleLoadMore,
     isStreaming,
-    currentAnswer    
-  } = useSmartAssistant();
+    currentAnswer,
+    questionClassification,
+  } = useSmartAssistant(isDrawerOpen, setIsDrawerOpen);
 
   const handleUseExactAnswer = (answer: any) => {
     console.log('Using exact answer:', answer);
@@ -122,6 +125,13 @@ export function SmartAssistant() {
                   className="space-y-3"
                   id="controls-section"
                 >
+                  <div className="flex justify-center">
+                    {isLoading ? (
+                      <Skeleton className="h-6 w-20" />
+                    ) : currentQuestion && (
+                      <ClassificationBadge initialType={questionClassification} />
+                    )}
+                  </div>
                   <SelectedChips chips={selectedChips} onRemove={handleRemoveChip} />
                   <div className="space-y-2">
                     {selectedChips.length === 0 && (

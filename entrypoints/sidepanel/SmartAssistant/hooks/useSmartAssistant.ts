@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { browser } from 'wxt/browser';
 import { AIPromptService } from '../services/api';
 import { ResultItem, ModelOption } from '../types';
+import { QuestionClassificationType } from '../types';
 
 const aiService = new AIPromptService();
 
-export const useSmartAssistant = () => {
+
+export const useSmartAssistant = (
+  isDrawerOpen: boolean,
+  setIsDrawerOpen: (open: boolean) => void
+) => {
   const [query, setQuery] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,106 +58,31 @@ export const useSmartAssistant = () => {
   const [questionId, setQuestionId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [questionClassification, setQuestionClassification] = useState<QuestionClassificationType>(null);
 
-  // Add message listener for text selection
-  useEffect(() => {
-    const messageListener = async (message: any) => {
-      if (message.type === 'TEXT_SELECTED' && message.data) {
-        const selectedText = message.data.text;
-        
-        // Reset everything first
-        handleReset();
-        
-        // Ensure drawer is open
-        setIsDrawerOpen(true);
-        
-        // Set the new query and current question
-        setQuery(selectedText);
-        setCurrentQuestion(selectedText);
-        
-        // Start the search immediately
-        setIsLoading(true);
-        setError(null);
-        setCurrentBatch(0);
-        setHasMore(true);
+  const performSearch = async (searchText: string, shouldReset = false) => {
+    if (shouldReset) {
+      handleReset();
+    }
 
-        try {
-          console.log('🎯 Initial search for selected text:', selectedText);
-          const [searchResults, questionResponse] = await Promise.all([
-            aiService.searchSimilar({
-              contentToSearch: selectedText,
-              k: 5,
-              returnAnswer: true,
-              contentType: 'BOTH',
-              searchType: 'HYBRID'
-            }),
-            aiService.createQuestion(selectedText)
-          ]);
-
-          if (questionResponse?.question_id) {
-            setQuestionId(questionResponse.question_id);
-            
-            // Add classification step
-            console.log('🏷️ Classifying question...');
-            await aiService.classifyQuestions([{
-              question_id: questionResponse.question_id,
-              text: selectedText
-            }]);
-            console.log('✅ Classification completed for question ID:', questionResponse.question_id);
-          }
-
-          const transformedResults = searchResults.map((result, index) => ({
-            id: result.questionData.question_id || `result-${index}`,
-            score: result.score || 0,
-            rank: index + 1,
-            title: result.metadata.parent_name || 'Untitled',
-            content: result.questionData.text || '',
-            metadata: {
-              ...result.metadata,
-              frequency: result.metadata.frequency || undefined,
-              status: result.metadata.status || undefined
-            },
-            answer_block: result.questionData.answer_block || ''
-          }));
-
-          setResults(transformedResults);
-          setCurrentBatch(1);
-        } catch (error) {
-          console.error('❌ Error processing selected text:', error);
-          setError('Failed to get results. Please try again.');
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    browser.runtime.onMessage.addListener(messageListener);
-    return () => browser.runtime.onMessage.removeListener(messageListener);
-  }, []); // Empty dependency array since we're using stable functions
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
-    console.log('🔍 Starting new search for:', query);
+    setQuery(searchText);
+    setCurrentQuestion(searchText);
     setIsLoading(true);
     setError(null);
-    setCurrentQuestion(query);
     setCurrentBatch(0);
     setHasMore(true);
 
     try {
-      console.log('🎯 Initial search - offset: 0, k: 5');
+      console.log('🎯 Initial search for:', searchText);
       const [searchResults, questionResponse] = await Promise.all([
         aiService.searchSimilar({
-          contentToSearch: query,
+          contentToSearch: searchText,
           k: 5,
           returnAnswer: true,
           contentType: 'BOTH',
           searchType: 'HYBRID'
         }),
-        aiService.createQuestion(query)
+        aiService.createQuestion(searchText)
       ]);
 
       console.log('📝 Question created:', questionResponse);
@@ -160,15 +90,25 @@ export const useSmartAssistant = () => {
       if (questionResponse?.question_id) {
         setQuestionId(questionResponse.question_id);
         
-        // Add classification step
-        console.log('🏷️ Classifying question...');
-        await aiService.classifyQuestions([{
+        const classificationResponse = await aiService.classifyQuestions([{
           question_id: questionResponse.question_id,
-          text: query
+          text: searchText
         }]);
-        
-        // Log after classification is done
-        console.log('✅ Classification completed for question ID:', questionResponse.question_id);
+
+        // Handle classification response
+        if (classificationResponse?.[0]) {
+          console.log(`🔍 Question classified: ${classificationResponse[0].question_id}, Classification: ${classificationResponse[0].classification}`);
+          setQuestionClassification(classificationResponse[0].classification as QuestionClassificationType);
+          
+          // Set drawer state based on classification
+          setIsDrawerOpen(classificationResponse[0].classification !== 'AUTO');
+          
+          // If the question is already answered, set the answer
+          if (classificationResponse[0].is_answered && classificationResponse[0].answer_block) {
+            setGeneratedAnswer(classificationResponse[0].answer_block);
+            setCurrentAnswer(classificationResponse[0].answer_block);
+          }
+        }
       }
 
       const transformedResults = searchResults.map((result, index) => ({
@@ -190,11 +130,30 @@ export const useSmartAssistant = () => {
 
       console.log(`✨ Found ${transformedResults.length} initial results`);
     } catch (error) {
-      console.error('❌ Error in handleSubmit:', error);
+      console.error('❌ Error in search:', error);
       setError('Failed to get results. Please try again.');
+      setIsDrawerOpen(true); // Open drawer on error
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Text selection listener
+  useEffect(() => {
+    const messageListener = async (message: any) => {
+      if (message.type === 'TEXT_SELECTED' && message.data) {
+        await performSearch(message.data.text, true);
+      }
+    };
+
+    browser.runtime.onMessage.addListener(messageListener);
+    return () => browser.runtime.onMessage.removeListener(messageListener);
+  }, []); // Empty dependency array since we're using stable functions
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    await performSearch(query);
   };
 
   const handleLoadMore = async () => {
@@ -366,6 +325,8 @@ export const useSmartAssistant = () => {
     setIsGenerating(false);
     setCurrentAnswer(null);
     setIsStreaming(false);
+    setQuestionClassification(null);
+    setIsDrawerOpen(true); // Always open drawer on reset
   };
 
   const isItemSelected = (resultId: string) => {
@@ -412,5 +373,6 @@ export const useSmartAssistant = () => {
     currentAnswer,
     isDrawerOpen,
     setIsDrawerOpen,
+    questionClassification,
   };
 };
