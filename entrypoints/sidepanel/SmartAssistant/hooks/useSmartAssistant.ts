@@ -92,6 +92,14 @@ export const useSmartAssistant = () => {
 
           if (questionResponse?.question_id) {
             setQuestionId(questionResponse.question_id);
+            
+            // Add classification step
+            console.log('🏷️ Classifying question...');
+            await aiService.classifyQuestions([{
+              question_id: questionResponse.question_id,
+              text: selectedText
+            }]);
+            console.log('✅ Classification completed for question ID:', questionResponse.question_id);
           }
 
           const transformedResults = searchResults.map((result, index) => ({
@@ -151,6 +159,16 @@ export const useSmartAssistant = () => {
 
       if (questionResponse?.question_id) {
         setQuestionId(questionResponse.question_id);
+        
+        // Add classification step
+        console.log('🏷️ Classifying question...');
+        await aiService.classifyQuestions([{
+          question_id: questionResponse.question_id,
+          text: query
+        }]);
+        
+        // Log after classification is done
+        console.log('✅ Classification completed for question ID:', questionResponse.question_id);
       }
 
       const transformedResults = searchResults.map((result, index) => ({
