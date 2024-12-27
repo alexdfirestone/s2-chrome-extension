@@ -96,3 +96,6 @@ export interface Metadata {
     };
     searchType: string;
   }
+
+
+  export type QuestionClassificationType = "AUTO" | "ASSISTANT" | "CUSTOM" | "UNCLASSIFIED" | null;

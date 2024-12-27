@@ -19,8 +19,10 @@ const SelectedChips = ({ chips, onRemove }: SelectedChipsProps) => {
     }));
   };
 
+  if (chips.length === 0) return null;
+
   return (
-    <div className="relative pt-6 px-3 overflow-hidden">
+    <div className="relative px-3 overflow-hidden">
       <AnimatePresence>
         {chips.map((chip, index) => (
           <motion.div

@@ -168,4 +168,26 @@ import { SupabaseAuthClient } from '@supabase/supabase-js/dist/module/lib/Supaba
         throw error;
       }
     }
+  
+    async classifyQuestions(questions: Array<{ question_id: string, text: string }>): Promise<any> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/embeddings`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'CLASSIFY_QUESTIONS',
+            data: {
+              questions
+            }
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to classify questions');
+        return response.json();
+      } catch (error) {
+        console.error('Error classifying questions:', error);
+        throw error;
+      }
+    }
   }
