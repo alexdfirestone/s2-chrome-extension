@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function SmartAssistant() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
+  const [isCustomContextOpen, setIsCustomContextOpen] = useState(false);
 
   const {
     query,
@@ -48,6 +49,11 @@ export function SmartAssistant() {
     isStreaming,
     currentAnswer,
     questionClassification,
+    customContext,
+    setCustomContext,
+    handleModifyAnswer,
+    autoSelectEnabled,
+    setAutoSelectEnabled,
   } = useSmartAssistant(isDrawerOpen, setIsDrawerOpen);
 
   const handleUseExactAnswer = (answer: any) => {
@@ -108,6 +114,26 @@ export function SmartAssistant() {
             <CardHeader className="text-center">
               <h2 className="text-2xl font-bold">AdviserGPT</h2>
               <Badge variant={'secondary'}>Broswer Extension - Beta</Badge>
+              <div className="flex items-center justify-center mt-4 space-x-2">
+                <span className="text-xs text-muted-foreground">Auto-select text</span>
+                <div className="relative inline-flex">
+                  <input
+                    type="checkbox"
+                    checked={autoSelectEnabled}
+                    onChange={(e) => setAutoSelectEnabled(e.target.checked)}
+                    className="peer sr-only"
+                    id="auto-select"
+                  />
+                  <label
+                    htmlFor="auto-select"
+                    className="relative h-3 w-5 cursor-pointer rounded-full bg-gray-200 
+                    transition-colors duration-200 ease-in-out peer-checked:bg-green-500
+                    after:absolute after:left-[2px] after:top-[1px] after:h-2 after:w-2
+                    after:rounded-full after:bg-white after:transition-transform 
+                    after:duration-200 peer-checked:after:translate-x-2"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <SuggestedQuestions onQuestionSelect={handleSuggestedQuestionWithDrawer} />
             <QueryInput
@@ -119,61 +145,63 @@ export function SmartAssistant() {
           </div>
         ) : (
           <div className="h-full flex flex-col relative">
-            {/* Scrollable content area containing both controls and answer */}
             <div className="flex-1 overflow-auto z-0">
-              <div className="p-4 space-y-6">
-                {/* Controls Section - Add an id for easy scrolling */}
-                <div 
-                  ref={controlsSectionRef} 
-                  className="space-y-3"
-                  id="controls-section"
-                >
-                  <div className="flex justify-center">
+              <div className="p-4 space-y-4">
+                <div ref={controlsSectionRef} className="space-y-2" id="controls-section">
+                  <div className="flex justify-center mb-2">
                     {isLoading ? (
-                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-5 w-16" />
                     ) : currentQuestion && (
                       <ClassificationBadge initialType={questionClassification} />
                     )}
                   </div>
                   <SelectedChips chips={selectedChips} onRemove={handleRemoveChip} />
-                  <div className="space-y-2">
-                    {selectedChips.length === 0 && (
-                      <p className="text-xs text-muted-foreground/75 text-center italic px-4">
-                        Select context below to generate an answer
-                      </p>
+                  {selectedChips.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center">Select context below</p>
+                  )}
+                  <div className="">
+                    <Button 
+                      onClick={() => setIsCustomContextOpen(!isCustomContextOpen)}
+                      variant="link"
+                      size="sm"
+                      className="w-full text-xs"
+                    >
+                      {isCustomContextOpen ? 'Hide Custom Context' : '+ Add Custom Context'}
+                    </Button>
+                    {isCustomContextOpen && (
+                      <textarea
+                        value={customContext}
+                        onChange={(e) => setCustomContext(e.target.value)}
+                        placeholder="Add custom context..."
+                        className="w-full min-h-[60px] mt-1 p-2 text-sm rounded-sm border"
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = 'auto';
+                          target.style.height = `${target.scrollHeight}px`;
+                        }}
+                      />
                     )}
+                  </div>
+                  <div className="flex gap-2">
                     <Button 
                       onClick={handleGenerateAnswerWithDrawer}
                       disabled={isGenerating || selectedChips.length === 0}
-                      variant="default"
-                      className="w-full"
+                      className="flex-1"
                     >
-                      {isGenerating ? 'Generating Answer...' : 'Generate Answer'}
+                      {isGenerating ? 'Generating...' : 'Generate'}
                     </Button>
                     {generatedAnswer && (
                       <Button 
                         onClick={handleCopyAnswer}
                         disabled={isCopied}
-                        variant="secondary"
-                        className="w-full"
+                        variant="outline"
                       >
-                        {isCopied ? (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy Answer
-                          </>
-                        )}
+                        {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     )}
                   </div>
                 </div>
 
-                {/* Answer Section */}
                 <div className="relative z-0">
                   {(isGenerating || generatedAnswer) && (
                     <AnswerTextArea 
@@ -181,13 +209,14 @@ export function SmartAssistant() {
                       isLoading={isGenerating}
                       isStreaming={isStreaming}
                       streamingContent={currentAnswer}
+                      modifyAnswer={handleModifyAnswer}
+                      isGenerating={isGenerating}
                     />
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Smart Assistant Drawer */}
             <div className="border-t fixed bottom-0 left-0 right-0 bg-background z-50">
               <ResultsDrawer
                 defaultOpen={true}

@@ -59,6 +59,8 @@ export const useSmartAssistant = (
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
   const [questionClassification, setQuestionClassification] = useState<QuestionClassificationType>(null);
+  const [customContext, setCustomContext] = useState('');
+  const [autoSelectEnabled, setAutoSelectEnabled] = useState(true);
 
   const performSearch = async (searchText: string, shouldReset = false) => {
     if (shouldReset) {
@@ -140,6 +142,8 @@ export const useSmartAssistant = (
 
   // Text selection listener
   useEffect(() => {
+    if (!autoSelectEnabled) return;
+
     const messageListener = async (message: any) => {
       if (message.type === 'TEXT_SELECTED' && message.data) {
         await performSearch(message.data.text, true);
@@ -148,7 +152,7 @@ export const useSmartAssistant = (
 
     browser.runtime.onMessage.addListener(messageListener);
     return () => browser.runtime.onMessage.removeListener(messageListener);
-  }, []); // Empty dependency array since we're using stable functions
+  }, [autoSelectEnabled]); // Added autoSelectEnabled to dependencies
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +243,8 @@ export const useSmartAssistant = (
     console.log('🤖 Generating answer...', {
       selectedChips: selectedChips.length,
       questionId,
-      model: answerGenerationModel.label
+      model: answerGenerationModel.label,
+      customContext: customContext
     });
     if (selectedChips.length === 0 || !questionId) return;
 
@@ -256,7 +261,7 @@ export const useSmartAssistant = (
         rfp_id: '',
         question: questionId,
         similarResponses: selectedChips.map(chip => chip.id),
-        additionalContext: '',
+        additionalContext: customContext,
         answerGenerationModel: answerGenerationModel.value,
         responseType: 'text',
         answerGenerationSettings: {
@@ -315,6 +320,7 @@ export const useSmartAssistant = (
     console.log('🔄 Resetting Smart Assistant state');
     setQuery('');
     setCurrentQuestion('');
+    setCustomContext('')
     setResults([]);
     setSelectedChips([]);
     setGeneratedAnswer('');
@@ -347,6 +353,99 @@ export const useSmartAssistant = (
     }
   };
 
+  const handleModifyAnswer = async (shortcutType: string, customPrompt?: string) => {
+    if (!currentAnswer || !questionId) return;
+
+    setIsGenerating(true);
+    setIsStreaming(true);
+    setError(null);
+
+    try {
+      // Extract text content from current answer
+      const paragraphBlocks = currentAnswer.blocks.filter((block: any) => block.type === 'paragraph');
+      const tableBlocks = currentAnswer.blocks.filter((block: any) => block.type === 'table');
+      const combinedText = paragraphBlocks.map((block: any) => block.data.text).join('\n\n');
+
+      const params: any = {
+        rfp_id: '',
+        question: questionId,
+        similarResponses: selectedChips.map(chip => chip.id),
+        additionalContext: customContext,
+        answerGenerationModel: answerGenerationModel.value,
+        responseType: 'text',
+        answerGenerationSettings: {
+          IncludeQuestionaireDetails: false,
+          IncludeFirmProfileDetails: false
+        },
+        prompt: answerGenerationModel.prompt,
+        isFollowUp: true,
+        currentContent: combinedText,
+        shortcutType,
+        customPrompt: customPrompt || ''
+      };
+
+      const reader = await aiService.generateAnswer(params);
+      if (!reader) throw new Error('Response body is null');
+
+      let accumulatedResponse = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = new TextDecoder().decode(value);
+        accumulatedResponse += text;
+        
+        const finalResponseMatch = /<final_response>([\s\S]*?)<\/final_response>/g.exec(accumulatedResponse);
+        const textToShow = finalResponseMatch ? finalResponseMatch[1].trim() : accumulatedResponse;
+        
+        // Create new editor block with tables preserved
+        const newBlocks = [
+          ...tableBlocks,
+          {
+            id: `block-${Date.now()}`,
+            type: "paragraph",
+            data: { text: textToShow }
+          }
+        ];
+
+        setCurrentAnswer({
+          time: Date.now(),
+          blocks: newBlocks,
+          version: currentAnswer.version
+        });
+      }
+
+      const finalResponseMatch = /<final_response>([\s\S]*?)<\/final_response>/g.exec(accumulatedResponse);
+      const finalText = finalResponseMatch ? finalResponseMatch[1].trim() : accumulatedResponse;
+
+      // Create final blocks with tables preserved
+      const finalBlocks = [
+        ...tableBlocks,
+        {
+          id: `block-${Date.now()}`,
+          type: "paragraph",
+          data: { text: finalText }
+        }
+      ];
+
+      const finalAnswer = {
+        time: Date.now(),
+        blocks: finalBlocks,
+        version: currentAnswer.version
+      };
+
+      setCurrentAnswer(finalAnswer);
+      setGeneratedAnswer(finalText);
+
+    } catch (error) {
+      console.error('Error modifying answer:', error);
+      setError('Failed to modify answer. Please try again.');
+    } finally {
+      setIsGenerating(false);
+      setIsStreaming(false);
+    }
+  };
+
   return {
     query,
     currentQuestion,
@@ -374,5 +473,10 @@ export const useSmartAssistant = (
     isDrawerOpen,
     setIsDrawerOpen,
     questionClassification,
+    customContext,
+    setCustomContext,
+    handleModifyAnswer,
+    autoSelectEnabled,
+    setAutoSelectEnabled,
   };
 };
