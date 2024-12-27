@@ -39,19 +39,7 @@ const AnswerTextArea = ({
     ?.replace(/<final_response>|<\/final_response>/g, '') || '';
 
   // Use streaming content if available, otherwise use answer
-  const editorValue = streamingContent || {
-    time: Date.now(),
-    blocks: [
-      {
-        id: "answer-block",
-        type: "paragraph",
-        data: {
-          text: answer
-        }
-      }
-    ],
-    version: "2.28.2"
-  };
+  const editorValue = streamingContent || answer
 
   return (
     <>

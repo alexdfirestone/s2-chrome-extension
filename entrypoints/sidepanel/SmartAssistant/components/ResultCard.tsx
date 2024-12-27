@@ -104,7 +104,10 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
             variant="outline"
             size="sm"
             className="h-auto sm:h-8 py-2 sm:py-0 flex-1 flex items-center justify-center gap-2 px-3 hover:bg-primary/10 border-primary/20 text-primary"
-            onClick={() => onUseExactAnswer(result.answer_block)}
+            onClick={() => {
+              const textToCopy = result.answer_block.blocks.map((block: any) => block.data.text).join('\n');
+              navigator.clipboard.writeText(textToCopy);
+            }}
           >
             <Copy className="h-4 w-4" />
             <span className="text-xs whitespace-nowrap">

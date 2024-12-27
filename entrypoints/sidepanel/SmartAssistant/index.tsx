@@ -80,8 +80,11 @@ export function SmartAssistant() {
   };
 
   const handleCopyAnswer = useCallback(() => {
-    if (generatedAnswer) {
-      navigator.clipboard.writeText(generatedAnswer);
+    if (currentAnswer) {
+      // Extract text from each block and join with line breaks
+      const textToCopy = currentAnswer.blocks.map((block: any) => block.data.text).join('\n');
+      
+      navigator.clipboard.writeText(textToCopy);
       setIsCopied(true);
       
       // Reset the copied state after 2 seconds
@@ -89,7 +92,7 @@ export function SmartAssistant() {
         setIsCopied(false);
       }, 500);
     }
-  }, [generatedAnswer]);
+  }, [currentAnswer]);
 
   return (
     <div className="h-full flex flex-col">
@@ -174,7 +177,7 @@ export function SmartAssistant() {
                 <div className="relative z-0">
                   {(isGenerating || generatedAnswer) && (
                     <AnswerTextArea 
-                      answer={generatedAnswer}
+                      answer={currentAnswer}
                       isLoading={isGenerating}
                       isStreaming={isStreaming}
                       streamingContent={currentAnswer}
