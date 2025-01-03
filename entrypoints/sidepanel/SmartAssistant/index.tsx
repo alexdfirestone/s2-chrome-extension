@@ -113,7 +113,7 @@ export function SmartAssistant() {
           <div className="h-full flex flex-col items-center justify-center p-6 space-y-8">
             <CardHeader className="text-center">
               <h2 className="text-2xl font-bold">AdviserGPT</h2>
-              <Badge variant={'secondary'}>Broswer Extension - Beta</Badge>
+              <Badge variant={'secondary'}>Browser Extension - Beta</Badge>
               <div className="flex items-center justify-center mt-4 space-x-2">
                 <span className="text-xs text-muted-foreground">Auto-select text</span>
                 <div className="relative inline-flex">
