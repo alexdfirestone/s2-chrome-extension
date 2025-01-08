@@ -190,4 +190,36 @@ import { SupabaseAuthClient } from '@supabase/supabase-js/dist/module/lib/Supaba
         throw error;
       }
     }
+  
+    async trackLogin(loginMethod: string): Promise<void> {
+      try {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('👤 No user found, aborting tracking');
+          return;
+        }
+
+        console.log('📡 Sending login tracking request...', { userId: user.id });
+        const headers = await this.getAuthHeaders();
+        
+        const response = await fetch(`${this.baseUrl}/api/metrics/trackLogin`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            userId: user.id,
+            email: user.email,
+            loginMethod: loginMethod,
+            timestamp: new Date().toISOString()
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to track login');
+        }
+      } catch (error) {
+        console.error('Error tracking login:', error);
+        // We don't throw the error since tracking failure shouldn't break the login flow
+      }
+    }
   }

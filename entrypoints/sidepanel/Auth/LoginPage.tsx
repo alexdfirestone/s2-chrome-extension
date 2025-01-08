@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { createSupabaseClient } from '@/supabase/client';
+import { AIPromptService } from '../SmartAssistant/services/api';
 
 export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => Promise<void> }) => {
   const [email, setEmail] = useState('');
@@ -10,6 +12,7 @@ export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: stri
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const aiService = new AIPromptService();
 
   useEffect(() => {
     // Check if WebAuthn is supported
@@ -33,6 +36,7 @@ export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: stri
     setIsLoading(true);
     try {
       await onLogin(email, password);
+      await aiService.trackLogin('broswer-plugin');  // Track successful email login
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -53,8 +57,8 @@ export const LoginPage = ({ onLogin }: { onLogin: (email: string, password: stri
       });
       
       if (credential) {
-        // Pass a special flag to indicate biometric auth
         await onLogin('biometric', 'biometric');
+        await aiService.trackLogin('biometric');  // Track successful biometric login
       }
     } catch (err) {
       setError('Biometric authentication failed');
