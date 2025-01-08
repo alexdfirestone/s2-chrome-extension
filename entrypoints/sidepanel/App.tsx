@@ -11,20 +11,29 @@ export default () => {
     const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false });
     const [isLoading, setIsLoading] = useState(true);
 
-
     useEffect(() => {
-        const init = async () => {
+        const initAuth = async () => {
             try {
-                const authStatus = await authService.checkAuthStatus();
-                setAuthState(authStatus);
+                // First check if we have a stored session
+                const storedAuth = await authService.checkAuthStatus();
+                
+                if (storedAuth.user?.refresh_token) {
+                    // Try to refresh the session
+                    const refreshedAuth = await authService.refreshSession(storedAuth.user.refresh_token);
+                    setAuthState(refreshedAuth);
+                    return;
+                }
+                
+                setAuthState({ isAuthenticated: false });
             } catch (error) {
-                console.error('Initialization failed:', error);
+                console.error('Authentication initialization failed:', error);
+                setAuthState({ isAuthenticated: false });
             } finally {
                 setIsLoading(false);
             }
         };
 
-        init();
+        initAuth();
 
         browser.runtime.onMessage.addListener((message: ExtMessage, sender, sendResponse) => {
             console.log('sidepanel:')

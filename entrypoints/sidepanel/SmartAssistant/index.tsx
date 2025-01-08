@@ -1,6 +1,6 @@
 'use client';
 
-import { RotateCcw, ChevronUp, ChevronDown, PlusCircle, Wand2, Copy, Check } from 'lucide-react';
+import { RotateCcw, ChevronUp, ChevronDown, PlusCircle, Wand2, Copy, Check, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSmartAssistant } from './hooks/useSmartAssistant';
 import SuggestedQuestions from './components/SuggestedQuestions'
@@ -21,6 +21,13 @@ import { CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import ClassificationBadge from './components/ClassificationBadge';
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { authService } from '../Auth/authService';
 
 export function SmartAssistant() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
@@ -99,6 +106,17 @@ export function SmartAssistant() {
       }, 500);
     }
   }, [currentAnswer]);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      // The App component will handle the redirect to login
+      // since it's watching the auth state
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -237,6 +255,23 @@ export function SmartAssistant() {
           </div>
         )}
       </div>
+
+      {!currentQuestion && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleLogout}>
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
   );
 }

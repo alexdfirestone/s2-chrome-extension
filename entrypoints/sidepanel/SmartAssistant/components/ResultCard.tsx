@@ -97,7 +97,7 @@ export const ResultCard = ({ result, isSelected, onSelect, onUseExactAnswer }: R
               className={`h-4 w-4 ${isSelected ? "text-primary" : "text-primary/60"}`}
             />
             <span className="text-xs whitespace-nowrap">
-              {isSelected ? "Added" : "Include in Answer"}
+              {isSelected ? "Added" : "Include in Answer Generation"}
             </span>
           </Button>
           <Button
