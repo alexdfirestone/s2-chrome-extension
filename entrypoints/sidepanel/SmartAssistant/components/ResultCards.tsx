@@ -55,7 +55,7 @@ const ResultCards = ({
   }
 
   return (
-    <div className="h-full overflow-auto">
+    <div className="h-full overflow-auto px-1">
       <div className="space-y-4 w-full">
         {results.map((result) => (
           <ResultCard

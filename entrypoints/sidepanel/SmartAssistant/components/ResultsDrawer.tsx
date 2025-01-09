@@ -93,12 +93,12 @@ export function ResultsDrawer({
   return (
     <div 
       style={{ height: drawerHeight }} 
-      className="transition-all duration-300 ease-in-out fixed bottom-0 left-0 right-0 z-[9999] flex flex-col shadow-lg rounded-t-lg bg-white"
+      className="transition-all duration-300 ease-in-out fixed bottom-0 left-0 right-0 z-[9999] flex flex-col shadow-lg rounded-t-lg bg-muted"
     >
       <div 
         ref={headerRef}
         onClick={handleExpandToggle}
-        className="flex-shrink-0 flex items-center justify-between p-3 cursor-pointer transition-colors hover:bg-gray-50"
+        className="flex-shrink-0 flex items-center justify-between p-3 cursor-pointer transition-colors hover:bg-muted/80"
       >
         <div className="flex items-center gap-2">
           <ChevronUp className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />

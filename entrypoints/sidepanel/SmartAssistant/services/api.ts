@@ -222,4 +222,56 @@ import { SupabaseAuthClient } from '@supabase/supabase-js/dist/module/lib/Supaba
         // We don't throw the error since tracking failure shouldn't break the login flow
       }
     }
+  
+    async saveQuestionToVault(questionId: string): Promise<void> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/vault`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            data: {
+              id: questionId
+            },
+            action: 'SAVE_QUESTION'
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save to the vault');
+        }
+      } catch (error) {
+        console.error('Error saving to vault:', error);
+        throw error;
+      }
+    }
+  
+    async saveAnswer(params: {
+      questionId: string,
+      answerBlock: any,
+      isAnswered?: boolean
+    }): Promise<void> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/questions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'UPDATE',
+            data: {
+              question_id: params.questionId,
+              answer_block: params.answerBlock,
+              is_answered: params.isAnswered ?? true,
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save answer');
+        }
+      } catch (error) {
+        console.error('Error saving answer:', error);
+        throw error;
+      }
+    }
   }

@@ -97,7 +97,7 @@ export function DrawerSystem({
   return (
     <div ref={containerRef} className="fixed inset-0 flex flex-col">
       {/* Top Drawer */}
-      <div className="bg-background border-b overflow-auto flex-1">
+      <div className="bg-muted border-b overflow-auto flex-1">
         <div className="flex flex-col">
           <div 
             ref={topHeaderRef}
@@ -145,7 +145,7 @@ export function DrawerSystem({
       </div>
 
       {/* Bottom Drawer */}
-      <div className={`border-t fixed bottom-0 left-0 right-0 ${activeDrawer === 'bottom' ? 'bg-background' : 'bg-white'}`}>
+      <div className={`border-t fixed bottom-0 left-0 right-0 ${activeDrawer === 'bottom' ? 'bg-muted' : 'bg-background'}`}>
         <div 
           ref={bottomHeaderRef}
           onClick={() => setActiveDrawer(activeDrawer === 'bottom' ? 'top' : 'bottom')}

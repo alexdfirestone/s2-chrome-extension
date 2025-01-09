@@ -3,6 +3,7 @@ import { browser } from 'wxt/browser';
 import { AIPromptService } from '../services/api';
 import { ResultItem, ModelOption } from '../types';
 import { QuestionClassificationType } from '../types';
+import { toast } from '@/hooks/use-toast';
 
 const aiService = new AIPromptService();
 
@@ -61,6 +62,7 @@ export const useSmartAssistant = (
   const [questionClassification, setQuestionClassification] = useState<QuestionClassificationType>(null);
   const [customContext, setCustomContext] = useState('');
   const [autoSelectEnabled, setAutoSelectEnabled] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const performSearch = async (searchText: string, shouldReset = false) => {
     if (shouldReset) {
@@ -446,6 +448,38 @@ export const useSmartAssistant = (
     }
   };
 
+  const handleSaveToVault = async () => {
+    if (!questionId || !currentAnswer) return;
+
+    console.log('💾 Saving answer and adding to vault:', questionId);
+    
+    setIsSaving(true);
+    try {
+      // First save the answer
+      await aiService.saveAnswer({
+        questionId,
+        answerBlock: currentAnswer,
+      });
+
+      // Then save to vault
+      await aiService.saveQuestionToVault(questionId);
+      
+      toast({
+        title: "Success",
+        description: "Saved to vault successfully",
+      });
+    } catch (error) {
+      console.error('Error saving answer and vault:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save to vault",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return {
     query,
     currentQuestion,
@@ -478,5 +512,7 @@ export const useSmartAssistant = (
     handleModifyAnswer,
     autoSelectEnabled,
     setAutoSelectEnabled,
+    handleSaveToVault,
+    isSaving,
   };
 };
