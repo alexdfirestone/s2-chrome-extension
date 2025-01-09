@@ -13,5 +13,8 @@ declare global {
   const defineContentScript: typeof import('wxt/sandbox')['defineContentScript']
   const defineUnlistedScript: typeof import('wxt/sandbox')['defineUnlistedScript']
   const fakeBrowser: typeof import('wxt/testing')['fakeBrowser']
+  const reducer: typeof import('/Users/alexfirestone/projects/s2-chrome-extension/hooks/use-toast')['reducer']
   const storage: typeof import('wxt/storage')['storage']
+  const toast: typeof import('/Users/alexfirestone/projects/s2-chrome-extension/hooks/use-toast')['toast']
+  const useToast: typeof import('/Users/alexfirestone/projects/s2-chrome-extension/hooks/use-toast')['useToast']
 }
