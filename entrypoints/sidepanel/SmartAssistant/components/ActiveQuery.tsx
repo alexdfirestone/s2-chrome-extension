@@ -16,13 +16,13 @@ interface ActiveQueryProps {
               <p className="text-xs font-medium text-muted-foreground">Current Question</p>
             </div>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={onReset}
-              className="border-dashed"
+              className="border-dashed hover:bg-muted"
             >
               <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-              New
+              New Question
             </Button>
           </div>
           <p className="text-sm font-medium leading-normal break-words w-full">{currentQuestion}</p>

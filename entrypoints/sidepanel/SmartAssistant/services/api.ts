@@ -190,4 +190,88 @@ import { SupabaseAuthClient } from '@supabase/supabase-js/dist/module/lib/Supaba
         throw error;
       }
     }
+  
+    async trackLogin(loginMethod: string): Promise<void> {
+      try {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('👤 No user found, aborting tracking');
+          return;
+        }
+
+        console.log('📡 Sending login tracking request...', { userId: user.id });
+        const headers = await this.getAuthHeaders();
+        
+        const response = await fetch(`${this.baseUrl}/api/metrics/trackLogin`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            userId: user.id,
+            email: user.email,
+            loginMethod: loginMethod,
+            timestamp: new Date().toISOString()
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to track login');
+        }
+      } catch (error) {
+        console.error('Error tracking login:', error);
+        // We don't throw the error since tracking failure shouldn't break the login flow
+      }
+    }
+  
+    async saveQuestionToVault(questionId: string): Promise<void> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/vault`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            data: {
+              id: questionId
+            },
+            action: 'SAVE_QUESTION'
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save to the vault');
+        }
+      } catch (error) {
+        console.error('Error saving to vault:', error);
+        throw error;
+      }
+    }
+  
+    async saveAnswer(params: {
+      questionId: string,
+      answerBlock: any,
+      isAnswered?: boolean
+    }): Promise<void> {
+      try {
+        const headers = await this.getAuthHeaders();
+        const response = await fetch(`${this.baseUrl}/api/rfp/questions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'UPDATE',
+            data: {
+              question_id: params.questionId,
+              answer_block: params.answerBlock,
+              is_answered: params.isAnswered ?? true,
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save answer');
+        }
+      } catch (error) {
+        console.error('Error saving answer:', error);
+        throw error;
+      }
+    }
   }
